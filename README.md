@@ -1,0 +1,2 @@
+# demo_project
+学习微信小程序，利用python flask框架搭建后台服务，使用antd和react实现web后台界面和数据交互服务
