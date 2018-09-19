@@ -1,0 +1,18 @@
+.filmBox {
+  .ant-card-body {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  .film_info {
+    >p {
+      overflow: hidden;
+      text-overflow:ellipsis;
+      white-space: nowrap;
+      margin-bottom: 4px;
+    }
+  }
+  img {
+      width:100%;
+      border:1px solid #f00;
+  }
+}

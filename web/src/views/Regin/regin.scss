@@ -1,0 +1,17 @@
+.reginBox,.emailBox {
+    padding-top: 180px;
+    >.container,.emailBox>.container {
+        border:1px solid #ddd;
+        width:360px;
+        margin:auto;
+        padding:20px 30px;
+        background: #fff;
+        .reginTitle {
+            font-size: 24px;
+        }
+    }
+}
+.emailBox>.container {
+    width:auto;
+    max-width: 560px;
+}

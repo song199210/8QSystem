@@ -1,0 +1,13 @@
+.loginBox {
+    padding-top: 180px;
+    >.container {
+        border:1px solid #ddd;
+        width:360px;
+        margin:auto;
+        padding:20px 30px;
+        background: #fff;
+        .loginTitle {
+            font-size: 24px;
+        }
+    }
+}

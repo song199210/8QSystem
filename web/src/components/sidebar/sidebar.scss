@@ -1,0 +1,11 @@
+.sidebar {
+    height: calc(100% - 50px);
+    width: 202px;
+    background: #fff;
+    border-right: 1px solid #e8e8e8;
+    .ant-menu-inline,
+    .ant-menu-vertical,
+    .ant-menu-vertical-left {
+        border-right: 0px;
+    }
+}

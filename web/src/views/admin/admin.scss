@@ -1,0 +1,19 @@
+#root {
+    height: 100%;
+    .App {
+        height: 100%;
+        .adminBox {
+            height: 100%;
+            .c_box {
+                position: absolute;
+                right: 0px;
+                top:50px;
+                bottom: 0px;
+                left: 207px;
+                margin:auto;
+                background: #fff;
+                padding:8px;
+            }
+        }
+    }
+}
