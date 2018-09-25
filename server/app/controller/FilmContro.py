@@ -2,6 +2,7 @@ from app.model import FilmsM
 from app.init_db import session
 from sqlalchemy.exc import InvalidRequestError
 import logging
+from app.controller.Scrapy import Films
 
 '''查询电影列表数据'''
 def queryFilmsM(reqJson):
@@ -59,4 +60,4 @@ def deleteFilmsM(reqJson):
 
 '''爬虫爬取数据'''
 def scrapyFilmsM():
-    pass
+    Films.ScrapyFilms('https://movie.douban.com/j/search_subjects?type=movie&tag={0}&sort=rank&page_limit=20&page_start={1}')

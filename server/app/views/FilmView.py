@@ -23,3 +23,9 @@ def deleteFilmJson():
         reqJson=common.requestBody(request)
         resJson=FilmContro.deleteFilmsM(reqJson)
         return jsonify(resJson)
+
+@FilmBlue.route("/scrapy",methods=['GET'],strict_slashes=False)
+def scrapyFilmJson():
+    if request.method == "GET":
+        resJson=FilmContro.scrapyFilmsM()
+        return jsonify({"msg":"开始爬取..."})

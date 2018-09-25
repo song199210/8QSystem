@@ -7,5 +7,4 @@ install_as_MySQLdb()
 app=Flask(__name__)
 app.config.from_object("config")
 CORS(app,support_credentials=True)
-
 from app import view,model
