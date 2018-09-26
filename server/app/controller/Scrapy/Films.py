@@ -6,6 +6,7 @@ import os,re,random,sys
 from urllib import parse
 from sqlalchemy.exc import InvalidRequestError
 from lxml import etree
+from selenium import webdriver
 from app.model import FilmsM
 from app.init_db import session
 from .config import userAgents,proxy_ip
@@ -14,12 +15,19 @@ class ScrapyFilms():
     newList=[]
     workThread=None
     page_last=0
+    client=None #selenium框架初始化客户端
     def __init__(self,urlStr,threadNum=10,tag="可播放",page_start=0):
         self.urlStr=urlStr
         self.threadNum=threadNum
         self.tag=tag
         self.page_start=page_start
-        self.startThread()
+        # self.startThread()
+        self.initSelenium()
+
+    '''初始化selenium框架'''
+    def initSelenium(self):
+        ScrapyFilms.client=webdriver.Chrome
+        ScrapyFilms.client.get("https://movie.douban.com/explore#!type=movie&tag=热门&sort=rank&page_limit=20&page_start=0")
 
 
     '''开启线程池'''
