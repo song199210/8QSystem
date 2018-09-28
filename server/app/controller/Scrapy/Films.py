@@ -33,7 +33,7 @@ class ScrapyFilms():
         requests=threadpool.makeRequests(self.startScrapy,setlist) #创建任务
         for req in requests:
             pool.putRequest(req)  #将任务放置线程池
-            time.sleep(3) #延时0.5s
+            time.sleep(2) #延时0.5s
         pool.wait()
         print("线程结束~~~~~~~~~~~~~~~~~")
         ScrapyFilms.newList.sort()
@@ -93,19 +93,17 @@ class ScrapyFilms():
         except Exception as err:
             print("Error:{0}—爬取详情出错".format(err))
 
-    ''''''
     def saveMysql(self,data):
         subjects=data['subjects']
         item=subjects[0]
-        time.sleep(1)
-        id=self.scrapyDetail(item['url'])
-        time.sleep(1)
-        self.downloadImg_s(item['cover'],id)
+        id
         for item in subjects:
-            if item['cover']:
-                self.downloadImg_s(item['cover'])
             if item['url']:
-                self.scrapyDetail(item['url'])
+                time.sleep(1)
+                id = self.scrapyDetail(item['url'])
+            if item['cover']:
+                time.sleep(1)
+                self.downloadImg_s(item['cover'],id)
 
     '''将封面图片存储到本地'''
     def downloadImg_s(self,imgcover,id):
@@ -129,7 +127,7 @@ class ScrapyFilms():
                 fp.close()
                 try:
                     query=session.query(FilmsM).filter(FilmsM.id == id).all()[0]
-                    imgurl='http://localhost:5000/static/{0}/{1}'.format('/'.join(imgpathlist)[1:],imgname)
+                    imgurl='/static/{0}/{1}'.format('/'.join(imgpathlist)[1:],imgname)
                     query.fimgurl=imgurl
                     session.commit()
                 except InvalidRequestError as err:
