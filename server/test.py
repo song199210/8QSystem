@@ -1,4 +1,6 @@
 def test(name,age="26"):
-    print(name+"age:"+age)
+    return name,age
 
-test("songxy")
+name1,age1=test("sxy")
+print(name1)
+print(age1)

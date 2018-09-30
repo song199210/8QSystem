@@ -1,25 +1,181 @@
 #-*- coding:utf-8 -*-
 import requests
+from requests.exceptions import ProxyError, Timeout
 import threadpool
 import time
 import os,re,random,sys
 from urllib import parse
+from sqlalchemy.exc import InvalidRequestError
 from lxml import etree
-from app.model import FilmsM
 from app.init_db import session
-from selenium import webdriver
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from app.controller.Scrapy.config import userAgents
+from app.model import FilmsM, ProxyIpM
+
 class ScrapyFilms():
-    def __init__(self):
-        self.start_selenium()
+    newList=[]
+    workThread=None
+    page_last=0
+    num1=0 #代理查询的次数
+    no_ipproxy=[]
+    def __init__(self,urlStr,threadNum=10,page_start=0):
+        self.urlStr=urlStr
+        self.threadNum=threadNum
+        self.page_start=page_start
+        self.startThread()
 
-    def start_selenium(self):
-        browser=webdriver.Chrome()
-        browser.get("https://movie.douban.com/explore#!type=movie&tag=可播放&sort=rank&page_limit=20&page_start=0")
-        wait=WebDriverWait(browser,20)
-        morebtn=wait.until(EC.presence_of_element_located(By.CLASS_NAME,".more"))
-        morebtn.click()
+    '''开启线程池'''
+    def startThread(self):
+        # setlist=[]
+        # for num in range(self.threadNum):
+        #     setlist.append(((self.urlStr,self.page_start),None))
+        #     self.page_start=self.page_start+20
+        #
+        # pool=threadpool.ThreadPool(self.threadNum) #开启线程池(里面包含len(urllist)线程)
+        # requests=threadpool.makeRequests(self.start_scrapy,setlist) #创建任务
+        # for req in requests:
+        #     pool.putRequest(req)  #将任务放置线程池
+        #     time.sleep(1) #延时1~3s
+        # pool.wait()
+        self.start_scrapy(self.urlStr,self.page_start)
 
-ScrapyFilmObj=ScrapyFilms()
+    '''初始化开始爬取'''
+    def start_scrapy(self,url,num):
+        httpProxy = session.query(ProxyIpM).filter(ProxyIpM.type1 == 'HTTP').all()
+        httpsProxy = session.query(ProxyIpM).filter(ProxyIpM.type1 == "HTTPS").all()
+        httpData, httpsData = [], []
+        if len(httpProxy) != 0:
+            for item in httpProxy:
+                httpData.append(item.to_json())
+
+        if len(httpsProxy) != 0:
+            for item in httpsProxy:
+                httpsData.append(item.to_json())
+        ScrapyFilms.httpData = httpData
+        ScrapyFilms.httpsData = httpsData
+        self.getRequest(url,num,self.randipproxy()) #开始请求
+
+    '''设置请求'''
+    def getRequest(self,url,num, proxies):
+        urlStr=url.format(num)
+        headers = {
+            "user-agent": userAgents[random.randrange(0, len(userAgents))]
+        }
+        ScrapyFilms.num1 = ScrapyFilms.num1 + 1
+        if ScrapyFilms.num1 > 80:
+            print("链接超过80次")
+            return False
+        if proxies in ScrapyFilms.no_ipproxy:
+            proxies=self.randipproxy()
+
+        try:
+            req = requests.get(urlStr, headers=headers, proxies=proxies)
+            resJson=req.json()
+            print("抓取成功1~~~~~~~~~")
+            if len(resJson['subjects']) == 0:  # 判断是不是数组并且数据是否为空
+                print("抓取结束~~~~~")
+            else:
+                print("抓取成功~~~~~~~~~")
+                self.saveMysql(resJson,proxies)
+                num = num + 20
+                self.getRequest(url, num, proxies)
+        except ProxyError:
+            print("代理报错~~~~~~~~~~~~~")
+            ScrapyFilms.no_ipproxy.append(proxies)
+            self.getRequest(url, num,self.randipproxy())
+        except Timeout:
+            print("链接超时~~~~~~~~~~~~")
+            self.getRequest(url, num,self.randipproxy())
+        except Exception as err:
+            print("未知错误")
+            print(err)
+
+    '''设置代理IP'''
+    def randipproxy(self):
+        proxies = {}
+        httpData, httpsData = ScrapyFilms.httpData, ScrapyFilms.httpsData
+        if len(httpsData) != 0 and len(httpsData) != 0:
+            rd1 = random.randrange(0, len(httpData))
+            rd2 = random.randrange(0, len(httpsData))
+            proxies['http'] = "{0}:{1}".format(httpData[rd1]['ip'], httpData[rd1]['port'])
+            proxies['https'] = "{0}:{1}".format(httpsData[rd2]['ip'], httpsData[rd2]['port'])
+            print("1234567~~~~~~~~~~~~~~~~")
+            print(proxies)
+            return proxies
+
+    '''分别抓取图片和详情数据保存数据'''
+    def saveMysql(self,data,proxies):
+        subjects=data['subjects']
+        for item in subjects:
+            if item['url']:
+                id = self.scrapyDetail(item['url'],proxies)
+            if item['cover']:
+                self.downloadImg_s(item['cover'],id,proxies)
+
+    '''爬取详情页面并存储到数据库'''
+    def scrapyDetail(self,url,proxies):
+        headers = {
+            "user-agent": userAgents[random.randrange(0, len(userAgents))]
+        }
+        try:
+            print(url)
+            print("开启调试")
+            urlStr=url+"?tag=热门&from=gaia_video"
+            res_html=requests.get(urlStr,headers=headers,proxies=proxies).text
+            res_html=res_html.encode("utf-8",'ignore')
+            ele=etree.HTML(res_html)
+            title=ele.xpath('//span[@property="v:itemreviewed"]/text()')[0]
+            fType="/".join(ele.xpath('//span[@property="v:genre"]/text()'))
+            director="/".join(ele.xpath('//span[@class="attrs"]/a[@rel="v:directedBy"]/text()'))
+            performer="/".join(ele.xpath('//span[@class="actor"]/span[@class="attrs"]/a[@rel="v:starring"]/text()'))
+            score="/".join(ele.xpath('//strong[@property="v:average"]/text()'))
+            releaseDate=",".join(ele.xpath('//span[@property="v:initialReleaseDate"]/text()'))
+            timelen="/".join(ele.xpath('//span[@property="v:runtime"]/text()'))
+            introduce=";".join(ele.xpath('//span[@property="v:summary"]/text()'))
+            try:
+                Films = FilmsM(title, fType, director, performer, score, releaseDate, timelen, introduce)
+                session.add(Films)
+                session.commit()
+                return Films.id
+            except InvalidRequestError as err:
+                print("InvalidRequestError %r" % repr(err))
+                session.rollback()
+            except Exception as e:
+                print("Exception %r" % repr(e))
+                session.rollback()
+        except Exception as err:
+            print("爬取详情Error:{0}".format(err))
+
+    '''将封面图片存储到本地'''
+    def downloadImg_s(self,imgcover,id,proxies):
+        basedir=os.path.dirname(__file__)
+        hostpath=parse.urlparse(imgcover)
+        imgpathlist=hostpath[2].split("/")
+        imgname=imgpathlist[len(imgpathlist) - 1]
+        imgpathlist.remove(imgname)
+        filepath=os.path.join(basedir,'..','..','static','/'.join(imgpathlist)[1:])
+        headers = {
+            "user-agent": userAgents[random.randrange(0, len(userAgents))]
+        }
+        if not os.path.exists(filepath):
+            print("路径不存在,正在创建路径~~~")
+            os.makedirs(filepath)
+        try:
+            res = requests.get(imgcover, headers=headers,proxies=proxies)
+            with open(os.path.join(filepath, imgname), "wb") as fp:
+                fp.write(res.content)
+                fp.close()
+                try:
+                    query=session.query(FilmsM).filter(FilmsM.id == id).all()[0]
+                    imgurl='/static/{0}/{1}'.format('/'.join(imgpathlist)[1:],imgname)
+                    query.fimgurl=imgurl
+                    session.commit()
+                except InvalidRequestError as err:
+                    print("InvalidRequestError %r" % repr(err))
+                    session.rollback()
+                except Exception as e:
+                    print("Exception %r" % repr(e))
+                    session.rollback()
+        except Exception as err:
+            print("图片下载Error:{0}".format(err))
+
+ScrapyFilms('https://movie.douban.com/explore#!type=movie&tag=可播放&sort=rank&page_limit=20&page_start={0}')
