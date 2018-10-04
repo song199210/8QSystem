@@ -1,16 +1,18 @@
 from flask import jsonify,request
 from app import app
-from .views import UserView,FilmView,JokeView,MusicView
+from .views import UserView,FilmView,JokeView,MusicView,PhotographyView
 
 user_blue=UserView.UserBlue
 film_blue=FilmView.FilmBlue
 joke_blue=JokeView.JokeBlue
 music_blue=MusicView.MusicBlue
+photography_blue=PhotographyView.photographyBlue
 
 app.register_blueprint(user_blue,url_prefix="/login")
 app.register_blueprint(film_blue,url_prefix="/film")
 app.register_blueprint(joke_blue,url_prefix="/joke")
 app.register_blueprint(music_blue,url_prefix="/music")
+app.register_blueprint(photography_blue,url_prefix="/photography")
 
 @app.route("/",methods=['GET'])
 def index():

@@ -1,5 +1,6 @@
 from app.model import FilmsM
 from app.init_db import session
+from sqlalchemy import func
 from sqlalchemy.exc import InvalidRequestError
 import logging
 from app.controller.Scrapy import Films
@@ -13,14 +14,29 @@ def queryFilmsM(reqJson):
     resJson['msg']="查询失败"
     resJson['data']=[]
     try:
-        query=session.query(FilmsM).limit(pageno).offset(pagesize).all()
-        if len(query) != 0:
-            resJson['flag']="success"
-            resJson['msg']="登录成功"
-            data=[]
-            for item in query:
-                data.append(item.to_json())
-            resJson['data']=data
+        offsetnum=pagesize*(pageno-1)
+        total=session.query(func.count(FilmsM.id)).scalar()
+        if offsetnum < total:
+            query=session.query(FilmsM.id,FilmsM.title,FilmsM.type,FilmsM.score,FilmsM.fimgurl).limit(pagesize).offset(offsetnum).all()
+            resJson['flag'] = "success"
+            resJson['msg'] = "查询成功"
+            if len(query) != 0:
+                data=[]
+                for item in query:
+                    obj={
+                        "id":item[0],
+                        "title":item[1],
+                        "type":item[2],
+                        "score":item[3],
+                        "fimgurl":item[4]
+                    }
+                    data.append(obj)
+                resJson['data']=data
+        else:
+            resJson['flag'] = "success"
+            resJson['msg'] = "查询成功"
+            resJson['data'] = []
+            
     except InvalidRequestError:
         session.rollback()
         resJson['msg']='InvalidRequestError %r' % repr(InvalidRequestError)
@@ -31,6 +47,34 @@ def queryFilmsM(reqJson):
         logging.error('Error %r' % repr(err))
 
     return resJson
+
+'''查看电影详情'''
+def lookDetailFilmsM(reqJson):
+    filmId=reqJson['filmId']
+    resJson={}
+    resJson['flag']="error"
+    resJson['msg']="查询失败"
+    if filmId == "" and not filmId:
+        logging.warn("FilmId warn:FilmId不存在")
+        print("FilmId warn:FilmId不存在")
+        resJson['msg']="FilmId warn:FilmId不存在"
+    else:
+        try:
+            detailFilms=session.query(FilmsM).filter(FilmsM.id == filmId).all()
+            resJson['flag']="success"
+            resJson['msg']="查询成功"
+            if len(detailFilms) != 0:
+                resJson['data']=detailFilms[0].to_json()
+        except InvalidRequestError:
+            session.rollback()
+            resJson['msg']="InvalidRequestError:%r" % repr(InvalidRequestError)
+            logging.error("InvalidRequestError:%r" % repr(InvalidRequestError))
+        except Exception as err:
+            session.rollback()
+            resJson['msg']="Error:%r" % repr(err)
+            logging.error("Error %r" % repr(err))
+
+        return resJson
 
 '''删除电影列表数据'''
 def deleteFilmsM(reqJson):

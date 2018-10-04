@@ -16,6 +16,14 @@ def queryFilmJson():
         resJson=FilmContro.queryFilmsM(reqJson)
         return jsonify(resJson)
 
+'''查询电影详情'''
+@FilmBlue.route("/detail",methods=['POST'],strict_slashes=False)
+def detailFilmJson():
+    if request.method == "POST":
+        reqJson=common.requestBody(request)
+        resJson=FilmContro.lookDetailFilmsM(reqJson)
+        return jsonify(resJson)
+
 '''删除推荐电影的列表数据'''
 @FilmBlue.route("/delete",methods=['POST'],strict_slashes=False)
 def deleteFilmJson():

@@ -5,7 +5,8 @@ from app.init_db import session
 from app.model import ProxyIpM
 import time
 
-def startProxyIP(url):
+def startProxyIP(url,n):
+    url=url.format(n)
     headers={
         "user-agent":"User-Agent:Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; en-us) AppleWebKit/534.50 (KHTML, like Gecko) Version/5.1 Safari/534.50",
     }
@@ -28,8 +29,11 @@ def startProxyIP(url):
                     proxyip=ProxyIpM(ipStr,port,address,type1,time1,time2)
                     session.add(proxyip)
                     session.commit()
+                    if n<10:
+                        n+=1
+                        startProxyIP(url,n)
 
     except ConnectionError:
         print(repr(ConnectionError))
 
-startProxyIP("http://www.xicidaili.com/nn")
+startProxyIP("http://www.xicidaili.com/nn/{0}",1)

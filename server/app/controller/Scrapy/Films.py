@@ -7,37 +7,21 @@ import os,re,random,sys
 from urllib import parse
 from sqlalchemy.exc import InvalidRequestError
 from lxml import etree
-<<<<<<< HEAD
-=======
-from selenium import webdriver
-from app.model import FilmsM
->>>>>>> 83d5483143bdfa36b324e593524c2169cdcdea5b
-from app.init_db import session
-from app.controller.Scrapy.config import userAgents
 from app.model import FilmsM, ProxyIpM
-
-class ScrapyFilms():
+from app.init_db import session
+from .config import userAgents
+from .common import Proxies
+class ScrapyFilms(Proxies):
     newList=[]
     workThread=None
     page_last=0
-<<<<<<< HEAD
-    num1=0 #代理查询的次数
-    no_ipproxy=[]
-    def __init__(self,urlStr,threadNum=10,page_start=0):
-=======
-    client=None #selenium框架初始化客户端
+    num1=0
     def __init__(self,urlStr,threadNum=10,tag="可播放",page_start=0):
->>>>>>> 83d5483143bdfa36b324e593524c2169cdcdea5b
+        super().__init__()
         self.urlStr=urlStr
         self.threadNum=threadNum
         self.page_start=page_start
-        # self.startThread()
-        self.initSelenium()
-
-    '''初始化selenium框架'''
-    def initSelenium(self):
-        ScrapyFilms.client=webdriver.Chrome
-        ScrapyFilms.client.get("https://movie.douban.com/explore#!type=movie&tag=热门&sort=rank&page_limit=20&page_start=0")
+        self.startThread()
 
     '''开启线程池'''
     def startThread(self):
@@ -56,25 +40,14 @@ class ScrapyFilms():
 
     '''初始化开始爬取'''
     def start_scrapy(self,url,num):
-        httpProxy = session.query(ProxyIpM).filter(ProxyIpM.type1 == 'HTTP').all()
-        httpsProxy = session.query(ProxyIpM).filter(ProxyIpM.type1 == "HTTPS").all()
-        httpData, httpsData = [], []
-        if len(httpProxy) != 0:
-            for item in httpProxy:
-                httpData.append(item.to_json())
-
-        if len(httpsProxy) != 0:
-            for item in httpsProxy:
-                httpsData.append(item.to_json())
-        ScrapyFilms.httpData = httpData
-        ScrapyFilms.httpsData = httpsData
+        self.getProxy()
         self.getRequest(url,num,self.randipproxy()) #开始请求
 
     '''设置请求'''
     def getRequest(self,url,num, proxies):
+        print(proxies)
         time.sleep(random.randrange(1,3))
         urlStr=url.format(num)
-        print(proxies)
         headers = {
             "user-agent": userAgents[random.randrange(0, len(userAgents))]
         }
@@ -82,14 +55,12 @@ class ScrapyFilms():
         if ScrapyFilms.num1 > 40:
             print("链接超过40次")
             return False
-        if proxies in ScrapyFilms.no_ipproxy:
+        if proxies in self.no_ipproxy:
             proxies=self.randipproxy()
 
         try:
             req = requests.get(urlStr, headers=headers, proxies=proxies,timeout=2)
-            print("抓取成功3")
             resJson=req.json()
-            print(resJson)
             if len(resJson['subjects']) == 0:  # 判断是不是数组并且数据是否为空
                 print("抓取结束~~~~~")
             else:
@@ -97,23 +68,12 @@ class ScrapyFilms():
                 num = num + 20
                 self.getRequest(url, num, proxies)
         except ProxyError:
-            ScrapyFilms.no_ipproxy.append(proxies)
+            self.no_ipproxy.append(proxies)
             self.getRequest(url, num,self.randipproxy())
         except Timeout:
             self.getRequest(url, num,self.randipproxy())
         except Exception as err:
             self.getRequest(url, num,self.randipproxy())
-
-    '''设置代理IP'''
-    def randipproxy(self):
-        proxies = {}
-        httpData, httpsData = ScrapyFilms.httpData, ScrapyFilms.httpsData
-        if len(httpsData) != 0 and len(httpsData) != 0:
-            rd1 = random.randrange(0, len(httpData))
-            rd2 = random.randrange(0, len(httpsData))
-            proxies['http'] = "{0}:{1}".format(httpData[rd1]['ip'], httpData[rd1]['port'])
-            proxies['https'] = "{0}:{1}".format(httpsData[rd2]['ip'], httpsData[rd2]['port'])
-            return proxies
 
     '''分别抓取图片和详情数据保存数据'''
     def saveMysql(self,data,proxies):
@@ -189,4 +149,4 @@ class ScrapyFilms():
         except Exception as err:
             print("图片下载Error:{0}".format(err))
 
-ScrapyFilms('https://movie.douban.com/j/search_subjects?type=movie&tag=可播放&sort=rank&playable=on&page_limit=20&page_start={0}')
+# ScrapyFilms('https://movie.douban.com/j/search_subjects?type=movie&tag=可播放&sort=rank&playable=on&page_limit=20&page_start={0}')
