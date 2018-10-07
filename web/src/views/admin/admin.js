@@ -7,6 +7,7 @@ import SiderbarView from "../../components/sidebar/sidebar";
 import FilmManager from "../filmManager/filmmanager";
 import MusicManager from "../musicManager/musicmanager";
 import JokeManager from "../jokeManager/jokemanager";
+import Photography from "../Photography/Photography";
 import "./admin.scss";
 
 const storage=window.localStorage;
@@ -27,6 +28,8 @@ class NormalAdminComponent extends React.Component {
                     component=MusicManager;
                 }else if(item.url === "jokes"){
                     component=JokeManager;
+                }else if(item.url === "photography"){
+                    component=Photography
                 }
                 return <Route component={component} key={index} path={url} />
             })

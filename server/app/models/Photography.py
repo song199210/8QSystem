@@ -25,7 +25,7 @@ class Photography(Base):
 
     def to_json(self):
         dict=self.__dict__
-        dict['cdatetime']=dict['cdatetime'].striftime("%Y-%m-%d  %H:%M:%S")
+        dict['cdatetime']=dict['cdatetime'].strftime("%Y-%m-%d %H:%M:%S")
         if "_sa_instance_state" in dict:
             del dict['_sa_instance_state']
         return dict

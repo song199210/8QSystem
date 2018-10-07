@@ -11,7 +11,7 @@ from urllib import parse
 import json
 s=requests.session()
 s.keep_alive=False
-class ScrapyPhotography(Proxies):   #摄影巴士数据
+class ScrapyPhotography(Proxies):
     num1=0 #设置请求次数限制
     def __init__(self,url):
         super().__init__()
@@ -19,7 +19,7 @@ class ScrapyPhotography(Proxies):   #摄影巴士数据
 
     def start_scrapy(self,url):
         self.getProxy()
-        self.getRequest(url,1,None)
+        self.getRequest(url,2,self.randipproxy())
 
     def getRequest(self,url,num,proxies):
         print(proxies)
@@ -38,19 +38,25 @@ class ScrapyPhotography(Proxies):   #摄影巴士数据
 
         try:
             req=s.get(urlStr,headers=headers,proxies=proxies,timeout=2)
-            content=req.text
-            ele=etree.HTML(content)
-            postlist_ele=ele.xpath("//div[@class='postlist']")
-            if req.status_code == 200 and len(postlist_ele) != 0:
-                for ele_item in postlist_ele:
-                    imgurl=ele_item.xpath("div[@class='post_img']/a/img/@src")[0].replace("h=150&w=200","h=600&w=800")
-                    title=ele_item.xpath("div[@class='post_con']/h2/a/text()")[0]
-                    author="摄影构图学"
-                    desc=ele_item.xpath("div[@class='post_con']/p")[1].xpath("./text()")[0]
-                    detailurl=ele_item.xpath("div[@class='post_con']/a[@class='more-link']/@href")[0]
-                    idStr = self.saveMysql(title, author, desc)
-                    self.savePic(imgurl,proxies,idStr)
-                    self.scrapyDetail(detailurl,proxies,idStr)
+            resJson=req.json()
+            print("~~~~~~~~~~~~~~~~~~~~~~~")
+            print(resJson)
+            data_list=resJson['data']
+            if resJson['status'] == 1 and len(data_list) != 0:
+                for item in data_list:
+                    title=item['title']
+                    author=item['author']
+                    desc=item['content']
+                    imgurl=item['pic_url']
+                    src_str=parse.urlparse(imgurl)[2]
+                    print(src_str)
+                    print("slide" in item['url'])
+                    if "slide" in item['url']:
+                        continue
+                    else:
+                        idStr=self.saveMysql(title,author,desc)
+                        self.savePic(imgurl,proxies,idStr)
+                        self.scrapyDetail(item['url'],proxies,idStr)
                 num=num+1
                 self.getRequest(url,num,proxies)
             else:
@@ -80,11 +86,9 @@ class ScrapyPhotography(Proxies):   #摄影巴士数据
         req=s.get(detailurl,headers=headers,proxies=proxies,timeout=2)
         htmlStr=req.text
         ele=etree.HTML(htmlStr)
-        content_ele=ele.xpath("//div[@class='post-content']/div")[0].xpath("p")
-        content_str="<div>"
-        for ele_item in content_ele:
-            content_str=content_str+str(etree.tostring(ele_item,encoding="utf-8",method="HTML",pretty_print=True),encoding = "utf8")
-        content_str+'</div>'
+        content_ele=ele.xpath("//div[@class='txt-wrap']")[0]
+        content_str=etree.tostring(content_ele,encoding="utf-8",method="HTML",pretty_print=True)
+        print(content_str)
         try:
             Photography = session.query(PhotographyM).filter(PhotographyM.id == id).all()
             if len(Photography) != 0:
@@ -101,9 +105,11 @@ class ScrapyPhotography(Proxies):   #摄影巴士数据
     def savePic(self,imgcover,proxies,id):
         basedir=os.path.dirname(__file__)
         hostpath=parse.urlparse(imgcover)
-        imgpathlist=hostpath[4].split("/")
-        imgname=imgpathlist[len(imgpathlist)-1].split("&")[0]
-        imgpath=os.path.abspath(os.path.join(basedir,'..','..','static','photography',"/".join(imgpathlist[3:5])))
+        imgpathlist=hostpath[2].split("/")
+        imgname=imgpathlist[len(imgpathlist)-1]
+        imgpathlist.remove(imgname)
+        print("path~~~~~~~~~~~~~~~~~~~")
+        imgpath=os.path.abspath(os.path.join(basedir,'..','..','static','photography',"/".join(imgpathlist)[1:]))
         headers={
             'Connection': 'close',
             "user-agent":userAgents[random.randrange(0,len(userAgents))]
@@ -118,7 +124,7 @@ class ScrapyPhotography(Proxies):   #摄影巴士数据
                 fp.close()
                 try:
                     query=session.query(PhotographyM).filter(PhotographyM.id==id).all()[0]
-                    imgurl='/static/photography/{0}/{1}'.format("/".join(imgpathlist[3:5]),imgname)
+                    imgurl='/static/photography/{0}/{1}'.format("/".join(imgpathlist)[1:],imgname)
                     query.imgurlstr=imgurl
                     session.commit()
                 except InvalidRequestError as err:
@@ -142,4 +148,4 @@ class ScrapyPhotography(Proxies):   #摄影巴士数据
         except Exception as err:
             print("Mysql3未知Error: %r" % err)
             session.rollback()
-# ScrapyPhotography("http://www.fsbus.com/page/{0}/")
+

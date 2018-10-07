@@ -1,91 +1,65 @@
 import React from "react";
 import { Card, Col, Row,Popconfirm,Button,message } from 'antd';
+import FilmDetailModal from "./filmDetailModal";
 import "./filmmanager.scss";
 
 class NormalEmailForm extends React.Component {
     constructor(props){
         super(props);
+        this.lmore_dom=null;
+        this.child_com=null;
         this.state={
-            dataList:[
-                {
-                    title:"奇迹男孩",
-                    director:"蒂芬·卓博斯基",
-                    performer:" 雅各布·特伦布莱 / 朱莉娅·罗伯茨",
-                    releaseDate:"2018-01-19",
-                    score:"8.9",
-                    type:"剧情/家庭",
-                    timelen:"113分钟"
-                },{
-                    title:"奇迹男孩",
-                    director:"蒂芬·卓博斯基",
-                    performer:" 雅各布·特伦布莱 / 朱莉娅·罗伯茨",
-                    releaseDate:"2018-01-19",
-                    score:"8.9",
-                    type:"剧情/家庭",
-                    timelen:"113分钟"
-                },{
-                    title:"奇迹男孩",
-                    director:"蒂芬·卓博斯基",
-                    performer:" 雅各布·特伦布莱 / 朱莉娅·罗伯茨",
-                    releaseDate:"2018-01-19",
-                    score:"8.9",
-                    type:"剧情/家庭",
-                    timelen:"113分钟"
-                },{
-                    title:"奇迹男孩",
-                    director:"蒂芬·卓博斯基",
-                    performer:" 雅各布·特伦布莱 / 朱莉娅·罗伯茨",
-                    releaseDate:"2018-01-19",
-                    score:"8.9",
-                    type:"剧情/家庭",
-                    timelen:"113分钟"
-                },{
-                    title:"奇迹男孩",
-                    director:"蒂芬·卓博斯基",
-                    performer:" 雅各布·特伦布莱 / 朱莉娅·罗伯茨",
-                    releaseDate:"2018-01-19",
-                    score:"8.9",
-                    type:"剧情/家庭",
-                    timelen:"113分钟"
-                },{
-                    title:"奇迹男孩",
-                    director:"蒂芬·卓博斯基",
-                    performer:" 雅各布·特伦布莱 / 朱莉娅·罗伯茨",
-                    releaseDate:"2018-01-19",
-                    score:"8.9",
-                    type:"剧情/家庭",
-                    timelen:"113分钟"
-                },{
-                    title:"奇迹男孩",
-                    director:"蒂芬·卓博斯基",
-                    performer:" 雅各布·特伦布莱 / 朱莉娅·罗伯茨",
-                    releaseDate:"2018-01-19",
-                    score:"8.9",
-                    type:"剧情/家庭",
-                    timelen:"113分钟"
-                }
-            ]
+            visible:false,
+            pageno:1,
+            dataList:[]
         }
     }
     handleSubmit = (e) => {
         e.preventDefault();
     }
     componentDidMount(){
-        // this.queryDataList(1);
+        const {pageno}=this.state;
+        this.queryDataList(pageno);
     }
-    onSearchCode(key){
-        
+    loadmorefuns=(evt)=>{
+        const {pageno}=this.state;
+        this.queryDataList(pageno+1);
     }
-    queryDataList=()=>{
+    openModal=(type,data)=>{
+        this.setState({
+            visible:true
+        });
+        this.child_com.initDetailJson(data);
+    }
+    handleClose=()=>{
+        this.setState({
+            visible:false
+        });
+    }
+    onRef=(child)=>{
+        this.child_com=child;
+    }
+    queryDataList=(pageno)=>{
         const values={
-            keyStr:"",
             userid:window.localStorage.getItem("userId")
         }
         const _that=this;
-        window.$common.httpAjax("codemanager/query","POST",values).then((res)=>{
+        const sendData={
+            pageno:pageno,
+            pagesize:16
+        }
+        const data_list=this.state.dataList;
+        window.$common.httpAjax("film/query","POST",sendData).then((res)=>{
             if(res.flag === "success"){
+                if(res.data.length == 0){
+                    if(_that.lmore_dom != null){
+                        _that.lmore_dom.innerHTML="加载完毕"
+                    }
+                    return false;
+                }
                 _that.setState({
-                    dataList:res.data
+                    dataList:[].concat(data_list,res.data),
+                    pageno:pageno
                 });
             }else{
                 message.error(res.msg);
@@ -123,19 +97,24 @@ class NormalEmailForm extends React.Component {
         });
     }
     render() {
-        const {dataList}=this.state;
+        const {visible,dataList}=this.state;
         const cardList=dataList.map((item,index)=>{
+            var imgurl=`http://localhost:5000${item.fimgurl}`;
+            var ftypelist=item.type.split("/");
+                ftypelist.splice(2);
+            var ftype=ftypelist.join("/");
             return (
                 <Col span={3} key={index}>
                     <Card title={item.c_title} bordered={false}>
-                        <p className="code_desc"><img src={require('@/src/static/images/1213.jpg')} alt/></p>
-                        <p style={{margin:"0px",textAlign:"center"}}><a href="">{item.title}（{item.score}）</a></p>
+                        <p className="code_desc"><img src={imgurl} alt=""/></p>
+                        <p style={{margin:"0px",textAlign:"center",height:"21px",overflow:"hidden"}}><a href="javascript:void(0);" onClick={()=>this.openModal('add',item)}>{item.title}</a></p>
+                        <p style={{margin:"0px",textAlign:"center",height:"21px"}}>{ftype}<b>（{item.score}）</b></p>
                     </Card>
                 </Col>
             );
         })
         return (
-            <div>
+            <div style={{height:"100%"}}>
                 <div className="searContainer" style={{marginBottom:"10px"}}>
                     <div className="right_add" style={{textAlign:"right"}}>
                         <Button type="primary" onClick={()=>this.setData("add")}>开始爬取</Button>
@@ -143,7 +122,9 @@ class NormalEmailForm extends React.Component {
                 </div>
                 <div className="filmBox" style={{ background: '#ECECEC', padding: '20px'}}>
                     <Row gutter={16}>{cardList}</Row>
+                    <div style={{textAlign:"center"}}><button className="loadmore" onClick={this.loadmorefuns} ref={(dom)=>this.lmore_dom=dom}>加载更多</button></div>
                 </div>
+                <FilmDetailModal visible={visible} closeModal={this.handleClose} onRef={this.onRef}></FilmDetailModal>
             </div>
         );
     }

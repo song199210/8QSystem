@@ -2,6 +2,7 @@ from flask import Blueprint,request,jsonify
 from app.controller import common,Photography
 
 queryControl=Photography.queryPhotographyM
+detailControl=Photography.detailPhotographyM
 deleteControl=Photography.deletePhotographyM
 scrapyControl=Photography.scrapyPhotographyM
 
@@ -15,17 +16,23 @@ def testPhotography():
 @photographyBlue.route("/query",methods=['POST'],strict_slashes=False)
 def queryPhotography():
     if request.method == "POST":
-        resJson=queryControl(request)
+        resJson=queryControl(common.requestBody(request))
+        return jsonify(resJson)
+
+@photographyBlue.route("/detail",methods=['POST'],strict_slashes=False)
+def detailPhotography():
+    if request.method == "POST":
+        resJson=detailControl(common.requestBody(request))
         return jsonify(resJson)
 
 @photographyBlue.route("delete",methods=['POST'],strict_slashes=False)
 def deletePhotography():
     if request.method == "POST":
-        resJson=deleteControl(request)
+        resJson=deleteControl(common.requestBody(request))
         return jsonify(resJson)
 
 @photographyBlue.route("scrapy",methods=['POST'],strict_slashes=False)
 def scrapyPhotography():
     if request.method == "POST":
-        resJson=scrapyControl(request)
+        resJson=scrapyControl(common.requestBody(request))
         return jsonify(resJson)
